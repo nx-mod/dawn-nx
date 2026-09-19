@@ -538,6 +538,7 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
     add_subdirectory(src/dawn)
     add_subdirectory(src/dawn/fuzzers)
     if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        include(switch_smoke_test/NvkLink.cmake)
         add_subdirectory(switch_smoke_test)
 
         # Build aurora-main (WiiCompiled's GX->modern-API renderer) as part of
@@ -553,9 +554,12 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
         set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
         set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
         set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
-        # The mkwii-nx checkout sits next to this one (../mkwii-nx); pass
-        # -DMKWII_NX_DIR=<path> if yours lives elsewhere.
-        if (NOT MKWII_NX_DIR)
+        # Standalone dev layout only: a game checkout next to this one
+        # (../mkwii-nx or ../wiicompiled), or -DMKWII_NX_DIR=<path>. Inside wii-nx
+        # Dawn is a subproject and wii-nx builds the game itself.
+        if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+            set(MKWII_NX_DIR "")
+        elseif (NOT MKWII_NX_DIR)
             foreach(_candidate mkwii-nx wiicompiled)
                 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../${_candidate}/runtime/CMakeLists.txt")
                     get_filename_component(MKWII_NX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${_candidate}" ABSOLUTE)
@@ -563,9 +567,14 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
                 endif ()
             endforeach ()
         endif ()
+        # No game checkout: build Dawn (and the smoke test) alone. That is what CI
+        # does, since a game's translated code can never live in a public runner.
         if (NOT EXISTS "${MKWII_NX_DIR}/runtime/CMakeLists.txt")
-            message(FATAL_ERROR "mkwii-nx not found next to this checkout; set -DMKWII_NX_DIR=<path to mkwii-nx>")
+            message(STATUS "wii-nx: no game checkout found; building Dawn without it "
+                           "(set -DMKWII_NX_DIR=<path> to build a game)")
+            set(MKWII_NX_DIR "" CACHE PATH "wii-nx game checkout" FORCE)
         endif ()
+        if (MKWII_NX_DIR)
         set(MKWII_NX_DIR "${MKWII_NX_DIR}" CACHE PATH "mkwii-nx checkout" FORCE)
         add_subdirectory(${MKWII_NX_DIR}/aurora-main aurora-main-build)
 
@@ -581,19 +590,13 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
         # tables are only reached by runtime string lookup, so the linker
         # drops them otherwise) and needs the newlib gap-fill stubs.
         if (TARGET WiiCompiled)
-            target_sources(WiiCompiled PRIVATE
-                ${CMAKE_CURRENT_SOURCE_DIR}/switch_smoke_test/nvk_switch_stubs.cpp)
-            target_link_libraries(WiiCompiled PRIVATE
-                -L/opt/devkitpro/portlibs/switch/lib
-                -Wl,-u,vk_icdGetInstanceProcAddr
-                -Wl,--whole-archive -lnvk -Wl,--no-whole-archive
-                -lnvk_support
-                -lz
-                # Every thread gets a 4 MiB stack instead of libnx's 128 KiB
-                # default; Tint overflowed the default compiling MKW shaders.
-                # See runtime/platform_switch/switch_thread_stack.cpp.
-                -Wl,--wrap=pthread_create)
+            dawn_switch_link_nvk(WiiCompiled)
+            # Every thread gets a 4 MiB stack instead of libnx's 128 KiB
+            # default; Tint overflowed the default compiling MKW shaders.
+            # See runtime/platform_switch/switch_thread_stack.cpp.
+            target_link_libraries(WiiCompiled PRIVATE -Wl,--wrap=pthread_create)
         endif()
+        endif ()  # MKWII_NX_DIR
     endif()
 endif()
 
