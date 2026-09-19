@@ -69,8 +69,23 @@ constexpr char kVulkanLibName[] = "vulkan-1.dll";
 constexpr char kVulkanLibName[] = "libvulkan.dylib";
 #elif DAWN_PLATFORM_IS(FUCHSIA)
 constexpr char kVulkanLibName[] = "libvulkan.so";
+#elif DAWN_PLATFORM_IS(HORIZON)
+// Unused: NVK is statically linked (libnvk.a, no dlopen on Horizon - see DynamicLib.cpp), so
+// VulkanInstance::Initialize's ICD::None case skips LoadVulkan()/kVulkanLibName entirely and
+// calls vk_icdGetInstanceProcAddr (NVK's statically-linked ICD entry point) directly instead.
+constexpr char kVulkanLibName[] = "";
 #else
 #error "Unimplemented Vulkan backend platform"
+#endif
+
+#if DAWN_PLATFORM_IS(HORIZON)
+extern "C" {
+// NVK's statically-linked ICD entry point (standard Vulkan Loader-ICD interface symbol,
+// see Mesa's src/nouveau/vulkan/). No Vulkan Loader is used on Switch - libnvk.a is linked
+// directly, so this is called in place of the dynamically-loaded vkGetInstanceProcAddr other
+// platforms get via DynamicLib (see DynamicLib.cpp's Horizon stub and its comment).
+PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(VkInstance instance, const char* pName);
+}
 #endif
 
 struct SkippedMessage {
@@ -370,7 +385,12 @@ MaybeError VulkanInstance::Initialize(const InstanceBase* instance, ICD icd) {
 
     switch (icd) {
         case ICD::None: {
+#if DAWN_PLATFORM_IS(HORIZON)
+            // NVK is statically linked; there's no loader/ICD file to open (see
+            // vk_icdGetInstanceProcAddr below).
+#else
             DAWN_TRY(LoadVulkan(kVulkanLibName));
+#endif
             // Succesfully loaded driver; break.
             break;
         }
@@ -397,7 +417,11 @@ MaybeError VulkanInstance::Initialize(const InstanceBase* instance, ICD icd) {
 #endif
     }
 
+#if DAWN_PLATFORM_IS(HORIZON)
+    DAWN_TRY(mFunctions.LoadGlobalProcs(vk_icdGetInstanceProcAddr));
+#else
     DAWN_TRY(mFunctions.LoadGlobalProcs(mVulkanLib));
+#endif
 
     DAWN_TRY_ASSIGN(mGlobalInfo, GatherGlobalInfo(mFunctions));
 

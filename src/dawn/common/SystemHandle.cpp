@@ -36,6 +36,8 @@
 #include "src/utils/windows_with_undefs.h"
 #elif DAWN_PLATFORM_IS(FUCHSIA)
 #include <zircon/syscalls.h>
+#elif DAWN_PLATFORM_IS(HORIZON)
+#include <switch.h>
 #elif DAWN_PLATFORM_IS(POSIX)
 #include <unistd.h>
 #endif
@@ -84,6 +86,34 @@ inline zx_handle_t DuplicateHandle(zx_handle_t handle) {
 inline void CloseHandle(zx_handle_t handle) {
     auto status = zx_handle_close(handle);
     DAWN_CHECK(status == ZX_OK);
+}
+
+#elif DAWN_PLATFORM_IS(HORIZON)
+
+// libnx's Handle is a u32 kernel object handle, same shape as Fuchsia's zx_handle_t (see
+// SystemHandle.h), but Horizon has no user-mode SVC to duplicate an arbitrary handle the way
+// zx_handle_duplicate does - specific object types have their own "another reference" mechanisms
+// if needed, there's no blanket one. SystemHandle::Duplicate() is only reached by cross-API/
+// cross-process resource sharing (SharedFence, SharedTextureMemory, Dawn Wire's out-of-process
+// shared memory) - none of which apply to this single-backend (Vulkan/NVK), in-process game, so
+// this fails fast instead of silently returning a wrong/invalid handle if that ever changes.
+
+constexpr inline Handle kInvalidHandle = INVALID_HANDLE;
+
+inline bool IsHandleValid(::Handle handle) {
+    return handle != INVALID_HANDLE;
+}
+
+inline ::Handle DuplicateHandle(::Handle handle) {
+    (void)handle;
+    dawn::ErrorLog() << "SystemHandle::Duplicate() is not supported on Horizon (Switch).";
+    DAWN_UNREACHABLE();
+    return kInvalidHandle;
+}
+
+inline void CloseHandle(::Handle handle) {
+    Result rc = svcCloseHandle(handle);
+    DAWN_CHECK(R_SUCCEEDED(rc));
 }
 
 #elif DAWN_PLATFORM_IS(POSIX)

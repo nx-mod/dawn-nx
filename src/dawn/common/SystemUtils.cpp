@@ -47,6 +47,8 @@
 #include <mach-o/dyld.h>
 
 #include <vector>
+#elif DAWN_PLATFORM_IS(HORIZON)
+#include <cstdlib>
 #endif
 
 #include <array>
@@ -86,11 +88,13 @@ std::pair<std::string, bool> GetEnvironmentVar(const char* variableName) {
 bool SetEnvironmentVar(const char* variableName, const char* value) {
     return SetEnvironmentVariableA(variableName, value) == TRUE;
 }
-#elif DAWN_PLATFORM_IS(POSIX)
+#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(HORIZON)
 const char* GetPathSeparator() {
     return "/";
 }
 
+// getenv/setenv/unsetenv are plain newlib in-process environ emulation, not
+// backed by any real OS environment - they work identically on Horizon.
 std::pair<std::string, bool> GetEnvironmentVar(const char* variableName) {
     char* value = getenv(variableName);
     return value == nullptr ? std::make_pair(std::string(), false)
@@ -153,6 +157,12 @@ std::optional<std::string> GetExecutablePath() {
 std::optional<std::string> GetExecutablePath() {
     return {};
 }
+#elif DAWN_PLATFORM_IS(HORIZON)
+std::optional<std::string> GetExecutablePath() {
+    // No /proc, and libnx does not expose the loaded .nro's own path - same
+    // "unimplemented, treat as absent" answer as Fuchsia/Emscripten above.
+    return {};
+}
 #else
 #error "Implement GetExecutablePath for your platform."
 #endif
@@ -205,6 +215,12 @@ std::optional<std::string> GetModulePath() {
 }
 #elif DAWN_PLATFORM_IS(EMSCRIPTEN)
 std::optional<std::string> GetModulePath() {
+    return {};
+}
+#elif DAWN_PLATFORM_IS(HORIZON)
+std::optional<std::string> GetModulePath() {
+    // Everything is statically linked into the one NRO on Horizon - no
+    // separate loadable modules, no dladdr - same "absent" answer as above.
     return {};
 }
 #else

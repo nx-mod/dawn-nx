@@ -41,6 +41,32 @@ project(
 )
 enable_testing()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch" OR CMAKE_SYSTEM_NAME STREQUAL "Horizon")
+  # newlib/libnx gates _timezone/_tzname/fdopen/etc behind these feature-test
+  # macros; several third-party deps (Abseil's cctz) assume they're already
+  # visible. Set here, after project(), rather than via CMAKE_CXX_FLAGS on
+  # the toolchain file or command line: devkitPro's Switch.cmake sets
+  # CMAKE_CXX_FLAGS via CMAKE_CXX_FLAGS_INIT through its own NintendoSwitch
+  # platform module, which CMake only processes internally after the
+  # toolchain file's own include() returns, so anything set there either
+  # races it or clobbers its -D__SWITCH__/-march/... flags outright.
+  add_compile_definitions(_GNU_SOURCE _DEFAULT_SOURCE)
+
+  # CMake's FindThreads probes for a separate -lpthread or glibc/musl-style
+  # pthread_create-in-libc; devkitA64's newlib+libnx has real pthreads, but
+  # baked directly into libnx.a/libc.a with no separate library to detect,
+  # so FindThreads comes up empty and any dependency that treats "no threads
+  # found" as fatal (SDL3's CMakeLists does) aborts configure outright.
+  # Pre-declaring the imported target short-circuits find_package(Threads):
+  # it returns early once the target already exists.
+  if (NOT TARGET Threads::Threads)
+    add_library(Threads::Threads INTERFACE IMPORTED)
+    set(THREADS_FOUND TRUE CACHE INTERNAL "")
+    set(CMAKE_THREAD_LIBS_INIT "" CACHE INTERNAL "")
+    set(CMAKE_USE_PTHREADS_INIT TRUE CACHE INTERNAL "")
+  endif()
+endif()
+
 list(INSERT CMAKE_MODULE_PATH 0 "${Dawn_SOURCE_DIR}/src/cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -511,6 +537,46 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
     add_subdirectory(src/emdawnwebgpu)
     add_subdirectory(src/dawn)
     add_subdirectory(src/dawn/fuzzers)
+    if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        add_subdirectory(switch_smoke_test)
+
+        # Build aurora-main (WiiCompiled's GX->modern-API renderer) as part of
+        # this same CMake project so it reuses the webgpu_dawn target that's
+        # already defined above, instead of aurora's own CMake FetchContent'ing
+        # a fresh, UNPATCHED vanilla Dawn tarball from upstream (which would
+        # silently lose every Horizon fix made in this fork tonight). Aurora's
+        # AuroraDawnProvider.cmake vendor path checks `if (NOT TARGET
+        # webgpu_dawn)` before fetching - since that target already exists by
+        # this point in the same configure pass, it just reuses it.
+        set(AURORA_ENABLE_GX ON CACHE BOOL "" FORCE)
+        set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
+        set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
+        set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
+        set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
+        add_subdirectory(/home/proot-dev/switch/wiicompiled/aurora-main aurora-main-build)
+
+        # The actual translated-MKW build: runtime/CMakeLists.txt's own aurora
+        # add_subdirectory() is guarded with `if (NOT TARGET aurora_core)`, so
+        # it reuses the aurora-main-build target added just above instead of
+        # re-adding the same source directory under a second binary dir.
+        set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
+        add_subdirectory(/home/proot-dev/switch/wiicompiled/runtime wiicompiled-runtime-build)
+
+        # The game's Vulkan path ends at NVK. Same recipe the smoke test
+        # proved on hardware: libnvk MUST be whole-archive (its Mesa dispatch
+        # tables are only reached by runtime string lookup, so the linker
+        # drops them otherwise) and needs the newlib gap-fill stubs.
+        if (TARGET WiiCompiled)
+            target_sources(WiiCompiled PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/switch_smoke_test/nvk_switch_stubs.cpp)
+            target_link_libraries(WiiCompiled PRIVATE
+                -L/opt/devkitpro/portlibs/switch/lib
+                -Wl,-u,vk_icdGetInstanceProcAddr
+                -Wl,--whole-archive -lnvk -Wl,--no-whole-archive
+                -lnvk_support
+                -lz)
+        endif()
+    endif()
 endif()
 
 ################################################################################

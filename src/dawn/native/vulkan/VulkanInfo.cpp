@@ -93,8 +93,11 @@ ResultOrError<VulkanGlobalInfo> GatherGlobalInfo(const VulkanFunctions& vkFuncti
                     "Vulkan API version (%s) was not at least %s.",
                     FormatAPIVersion(info.apiVersion), FormatAPIVersion(kRequiredVulkanVersion));
 
-    // Gather the info about the instance layers
-    {
+    // Gather the info about the instance layers. A null proc (see
+    // VulkanFunctions::LoadGlobalProcs) leaves info.layers empty/default,
+    // which is the correct answer on Switch anyway - no layers are ever
+    // installed there.
+    if (vkFunctions.EnumerateInstanceLayerProperties != nullptr) {
         uint32_t count = 0;
         VkResult result =
             VkResult::WrapUnsafe(vkFunctions.EnumerateInstanceLayerProperties(&count, nullptr));

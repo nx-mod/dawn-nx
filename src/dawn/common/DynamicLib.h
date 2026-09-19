@@ -37,7 +37,7 @@
 
 #if DAWN_PLATFORM_IS(WINDOWS)
 #include "partition_alloc/pointers/raw_ptr.h"
-#elif DAWN_PLATFORM_IS(POSIX)
+#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(HORIZON)
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 #else
 #error "Unsupported platform for DynamicLib"
@@ -87,6 +87,9 @@ class DynamicLib {
 #elif DAWN_PLATFORM_IS(POSIX)
     // On POSIX we use `dlopen`, which returns a "handle" which may not be a real pointer:
     // > The value of this symbol table handle should not be interpreted in any way by the caller.
+    RAW_PTR_EXCLUSION void* mHandle = nullptr;
+#elif DAWN_PLATFORM_IS(HORIZON)
+    // Never set to anything but nullptr - see DynamicLib.cpp's Horizon branch.
     RAW_PTR_EXCLUSION void* mHandle = nullptr;
 #else
 #error "Unsupported platform for DynamicLib"

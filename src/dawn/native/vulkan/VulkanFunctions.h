@@ -69,6 +69,9 @@ using VkFn = typename VkFnImpl<F>::type;
 // and the vkGet*ProcAddress entry points.
 struct VulkanFunctions {
     MaybeError LoadGlobalProcs(const DynamicLib& vulkanLib);
+    // Horizon has no dlopen (see DynamicLib.cpp); NVK's static ICD entry point
+    // (vk_icdGetInstanceProcAddr) is loaded directly, skipping DynamicLib entirely.
+    MaybeError LoadGlobalProcs(PFN_vkGetInstanceProcAddr getInstanceProcAddr);
     MaybeError LoadInstanceProcs(VkInstance instance, const VulkanGlobalInfo& globalInfo);
     // Attempts to load the VK_EXT_debug_utils extension procs. Returns false if any required
     // entrypoint is missing (workaround for buggy Android Vulkan drivers/loaders that advertise
@@ -179,6 +182,11 @@ struct VulkanFunctions {
     VkFn<PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR>
         GetPhysicalDeviceWin32PresentationSupportKHR = nullptr;
 #endif  // DAWN_PLATFORM_IS(WINDOWS)
+
+#if DAWN_PLATFORM_IS(HORIZON)
+    // NN_vi_surface
+    VkFn<PFN_vkCreateViSurfaceNN> CreateViSurfaceNN = nullptr;
+#endif  // DAWN_PLATFORM_IS(HORIZON)
 
 #if DAWN_PLATFORM_IS(ANDROID)
     // KHR_android_surface

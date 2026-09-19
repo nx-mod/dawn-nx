@@ -39,6 +39,19 @@
 #endif
 #elif DAWN_PLATFORM_IS(POSIX)
 #include <dlfcn.h>
+#elif DAWN_PLATFORM_IS(HORIZON)
+// No dynamic library loading exists on Horizon (no dlopen, no shared
+// objects at all - everything is statically linked into the NRO). Every
+// method below is a stub that reports "not available" rather than
+// "not found": Dawn's own callers (Vulkan ICD discovery, SwiftShader
+// fallback, ANGLE) already treat a failed DynamicLib::Open as a normal,
+// recoverable "library absent" outcome, since that's also how it behaves on
+// any desktop platform that simply doesn't have that library installed. The
+// Vulkan backend's Switch path bypasses this file entirely (static-linked
+// against libnvk.a, driven through vk_icdGetInstanceProcAddr directly), so
+// by the time that patch lands this file's stub bodies are dead code for
+// Vulkan specifically; leaving it as a working stub here still avoids
+// silently swallowing an actual DynamicLib call from elsewhere in Dawn.
 #else
 #error "Unsupported platform for DynamicLib"
 #endif
@@ -106,6 +119,10 @@ bool DynamicLib::Open(const std::string& filename, std::string* error) {
     if (mHandle == nullptr && error != nullptr) {
         *error = dlerror();
     }
+#elif DAWN_PLATFORM_IS(HORIZON)
+    if (error != nullptr) {
+        *error = "DynamicLib.Open: " + filename + ": no dynamic library loading on Horizon";
+    }
 #else
 #error "Unsupported platform for DynamicLib"
 #endif
@@ -129,6 +146,10 @@ bool DynamicLib::OpenLoaded(const std::string& filename, std::string* error) {
 
     if (mHandle == nullptr && error != nullptr) {
         *error = dlerror();
+    }
+#elif DAWN_PLATFORM_IS(HORIZON)
+    if (error != nullptr) {
+        *error = "DynamicLib.OpenLoaded: " + filename + ": no dynamic library loading on Horizon";
     }
 #else
 #error "Unsupported platform for DynamicLib"
@@ -167,6 +188,9 @@ void DynamicLib::Close() {
 #endif
 #elif DAWN_PLATFORM_IS(POSIX)
         dlclose(mHandle);
+#elif DAWN_PLATFORM_IS(HORIZON)
+        // Unreachable: mHandle is never non-null on Horizon (Open/OpenLoaded
+        // above never set it), so mNeedsClose is never true here either.
 #else
 #error "Unsupported platform for DynamicLib"
 #endif
@@ -190,6 +214,10 @@ void* DynamicLib::GetProc(const std::string& procName, std::string* error) const
 
     if (proc == nullptr && error != nullptr) {
         *error = dlerror();
+    }
+#elif DAWN_PLATFORM_IS(HORIZON)
+    if (error != nullptr) {
+        *error = "DynamicLib.GetProc: " + procName + ": no dynamic library loading on Horizon";
     }
 #else
 #error "Unsupported platform for DynamicLib"

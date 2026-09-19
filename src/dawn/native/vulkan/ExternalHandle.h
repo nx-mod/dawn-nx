@@ -28,6 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_EXTERNALHANDLE_H_
 #define SRC_DAWN_NATIVE_VULKAN_EXTERNALHANDLE_H_
 
+#include <cstdint>
+
 #include "src/dawn/common/vulkan_platform.h"
 
 namespace dawn::native::vulkan {
@@ -42,6 +44,13 @@ const ExternalSemaphoreHandle kNullExternalSemaphoreHandle = ZX_HANDLE_INVALID;
 #elif DAWN_PLATFORM_IS(POSIX)
 using ExternalSemaphoreHandle = int;
 const ExternalSemaphoreHandle kNullExternalSemaphoreHandle = -1;
+#elif DAWN_PLATFORM_IS(HORIZON)
+// No VK_KHR_external_semaphore_{fd,win32} equivalent on Switch, and this single-process,
+// single-device game never shares a semaphore across processes/APIs. Must still match
+// dawn::SystemHandle::Handle's type (uint32_t on Horizon, see SystemHandle.h) since
+// SharedFenceVk hands a SystemHandle::Get() result straight to this type (TextureVk.cpp).
+using ExternalSemaphoreHandle = uint32_t;
+const ExternalSemaphoreHandle kNullExternalSemaphoreHandle = 0;
 #else
 #error "Platform not supported."
 #endif

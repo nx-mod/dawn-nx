@@ -42,7 +42,8 @@ class SystemHandle : public NonCopyable {
     // Create an alias for the actual primitive handle type on a platform.
 #if DAWN_PLATFORM_IS(WINDOWS)
     using Handle = void*;
-#elif DAWN_PLATFORM_IS(FUCHSIA)
+#elif DAWN_PLATFORM_IS(FUCHSIA) || DAWN_PLATFORM_IS(HORIZON)
+    // libnx kernel object Handle is a u32, same shape as Fuchsia's zx_handle_t.
     using Handle = uint32_t;
 #elif DAWN_PLATFORM_IS(POSIX)
     using Handle = int;

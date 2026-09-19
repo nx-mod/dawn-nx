@@ -85,6 +85,9 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
         case Surface::Type::XlibWindow:
             s->Append("XlibWindow");
             break;
+        case Surface::Type::ViWindow:
+            s->Append("ViWindow");
+            break;
         case Surface::Type::Undefined:
             DAWN_UNREACHABLE();
             break;
@@ -116,7 +119,8 @@ ResultOrError<UnpackedPtr<SurfaceDescriptor>> ValidateSurfaceDescriptor(
                   Branch<SurfaceSourceWindowsHWND>, Branch<SurfaceDescriptorFromWindowsCoreWindow>,
                   Branch<SurfaceDescriptorFromWindowsUWPSwapChainPanel>,
                   Branch<SurfaceDescriptorFromWindowsWinUISwapChainPanel>,
-                  Branch<SurfaceSourceXlibWindow>, Branch<SurfaceSourceWaylandSurface>>()));
+                  Branch<SurfaceSourceXlibWindow>, Branch<SurfaceSourceWaylandSurface>,
+                  Branch<SurfaceSourceViNN>>()));
     switch (type) {
 #if DAWN_PLATFORM_IS(ANDROID)
         case wgpu::SType::SurfaceSourceAndroidNativeWindow: {
@@ -126,6 +130,14 @@ ResultOrError<UnpackedPtr<SurfaceDescriptor>> ValidateSurfaceDescriptor(
             return descriptor;
         }
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+#if DAWN_PLATFORM_IS(HORIZON)
+        case wgpu::SType::SurfaceSourceViNN: {
+            auto* subDesc = descriptor.Get<SurfaceSourceViNN>();
+            DAWN_ASSERT(subDesc != nullptr);
+            DAWN_INVALID_IF(subDesc->window == nullptr, "NWindow is not set.");
+            return descriptor;
+        }
+#endif  // DAWN_PLATFORM_IS(HORIZON)
 #if defined(DAWN_ENABLE_BACKEND_METAL)
         case wgpu::SType::SurfaceSourceMetalLayer: {
             auto* subDesc = descriptor.Get<SurfaceSourceMetalLayer>();
@@ -304,13 +316,20 @@ Surface::Surface(InstanceBase* instance, const UnpackedPtr<SurfaceDescriptor>& d
                 Branch<SurfaceSourceWindowsHWND>, Branch<SurfaceDescriptorFromWindowsCoreWindow>,
                 Branch<SurfaceDescriptorFromWindowsUWPSwapChainPanel>,
                 Branch<SurfaceDescriptorFromWindowsWinUISwapChainPanel>,
-                Branch<SurfaceSourceXlibWindow>, Branch<SurfaceSourceWaylandSurface>>()
+                Branch<SurfaceSourceXlibWindow>, Branch<SurfaceSourceWaylandSurface>,
+                Branch<SurfaceSourceViNN>>()
             .AcquireSuccess();
     switch (type) {
         case wgpu::SType::SurfaceSourceAndroidNativeWindow: {
             auto* subDesc = descriptor.Get<SurfaceSourceAndroidNativeWindow>();
             mType = Type::AndroidWindow;
             mAndroidNativeWindow = subDesc->window;
+            break;
+        }
+        case wgpu::SType::SurfaceSourceViNN: {
+            auto* subDesc = descriptor.Get<SurfaceSourceViNN>();
+            mType = Type::ViWindow;
+            mNWindow = subDesc->window;
             break;
         }
         case wgpu::SType::SurfaceSourceMetalLayer: {
@@ -393,6 +412,12 @@ void* Surface::GetAndroidNativeWindow() const {
     DAWN_CHECK(!IsError());
     DAWN_CHECK(mType == Type::AndroidWindow);
     return mAndroidNativeWindow;
+}
+
+void* Surface::GetNWindow() const {
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::ViWindow);
+    return mNWindow;
 }
 
 void* Surface::GetMetalLayer() const {

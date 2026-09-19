@@ -31,6 +31,8 @@
 
 #if DAWN_PLATFORM_IS(WINDOWS)
 #include "src/utils/windows_with_undefs.h"
+#elif DAWN_PLATFORM_IS(HORIZON)
+#include <switch.h>
 #elif DAWN_PLATFORM_IS(POSIX)
 #include <unistd.h>
 #else
@@ -42,6 +44,10 @@ namespace dawn::utils {
 #if DAWN_PLATFORM_IS(WINDOWS)
 void USleep(unsigned int usecs) {
     Sleep(static_cast<DWORD>(usecs / 1000));
+}
+#elif DAWN_PLATFORM_IS(HORIZON)
+void USleep(unsigned int usecs) {
+    svcSleepThread(static_cast<int64_t>(usecs) * 1000);
 }
 #elif DAWN_PLATFORM_IS(POSIX)
 void USleep(unsigned int usecs) {

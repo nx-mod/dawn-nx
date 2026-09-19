@@ -92,10 +92,25 @@ MaybeError VulkanFunctions::LoadGlobalProcs(const DynamicLib& vulkanLib) {
     if (!vulkanLib.GetProc(&GetInstanceProcAddr, "vkGetInstanceProcAddr")) {
         return DAWN_INTERNAL_ERROR("Couldn't get vkGetInstanceProcAddr");
     }
+    return LoadGlobalProcs(GetInstanceProcAddr);
+}
+
+MaybeError VulkanFunctions::LoadGlobalProcs(PFN_vkGetInstanceProcAddr getInstanceProcAddr) {
+    if (getInstanceProcAddr == nullptr) {
+        return DAWN_INTERNAL_ERROR("Couldn't get vkGetInstanceProcAddr");
+    }
+    GetInstanceProcAddr = getInstanceProcAddr;
 
     GET_GLOBAL_PROC(CreateInstance);
     GET_GLOBAL_PROC(EnumerateInstanceExtensionProperties);
-    GET_GLOBAL_PROC(EnumerateInstanceLayerProperties);
+
+    // NVK's global (instance=NULL) vkGetInstanceProcAddr doesn't resolve this
+    // one on Switch, even though the spec lists it as always-available - so,
+    // like EnumerateInstanceVersion below, allow nullptr here too.
+    // GatherGlobalInfo() treats a null proc as "no layers" (correct: Switch
+    // has no Vulkan layers installed at all).
+    EnumerateInstanceLayerProperties = AsVkFn<PFN_vkEnumerateInstanceLayerProperties>(
+        GetInstanceProcAddr(nullptr, "vkEnumerateInstanceLayerProperties"));
 
     // Is not available in Vulkan 1.0, so allow nullptr
     EnumerateInstanceVersion = AsVkFn<PFN_vkEnumerateInstanceVersion>(
@@ -192,6 +207,12 @@ MaybeError VulkanFunctions::LoadInstanceProcs(VkInstance instance,
         GET_INSTANCE_PROC(CreateAndroidSurfaceKHR);
     }
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+
+#if DAWN_PLATFORM_IS(HORIZON)
+    if (globalInfo.HasExt(InstanceExt::ViSurface)) {
+        GET_INSTANCE_PROC(CreateViSurfaceNN);
+    }
+#endif  // DAWN_PLATFORM_IS(HORIZON)
 
 #if defined(DAWN_USE_X11)
     if (globalInfo.HasExt(InstanceExt::XlibSurface)) {

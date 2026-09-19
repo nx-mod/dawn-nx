@@ -4005,6 +4005,15 @@
             {"name": "window", "type": "void *"}
         ]
     },
+    "surface source vi NN": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "window", "type": "void *"}
+        ]
+    },
     "emscripten surface source canvas HTML selector": {
         "category": "structure",
         "chained": "in",
@@ -4229,7 +4238,8 @@
             {"value": 81, "name": "adapter properties drm", "tags": ["dawn", "native"]},
             {"value": 82, "name": "render bundle encoder resource table", "tags": ["dawn"]},
             {"value": 83, "name": "dawn shader source SPIRV", "tags": ["dawn"]},
-            {"value": 84, "name": "shared buffer memory host pointer descriptor", "tags": ["dawn", "native"]}
+            {"value": 84, "name": "shared buffer memory host pointer descriptor", "tags": ["dawn", "native"]},
+            {"value": 85, "name": "surface source vi NN", "tags": ["dawn", "native"]}
         ]
     },
     "texture": {
