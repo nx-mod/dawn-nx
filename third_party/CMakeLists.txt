@@ -183,7 +183,11 @@ if (DAWN_BUILD_PROTOBUF AND NOT TARGET libprotobuf-mutator)
     include("libprotobuf-mutator/BUILD.cmake")
 endif()
 
-if (NOT TARGET renderdoc-api)
+# RenderDoc is a desktop-only GPU frame-capture/debugging tool - its vendored
+# renderdoc_app.h has no Switch support at all (#error "Unknown platform" for
+# anything it doesn't recognize) and never will, so this is unconditional
+# everywhere except here rather than trying to patch vendored third-party code.
+if (NOT TARGET renderdoc-api AND NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     add_library(RenderDocApi INTERFACE)
     target_include_directories(RenderDocApi INTERFACE "renderdoc")
     target_compile_definitions(RenderDocApi INTERFACE "DAWN_ENABLE_RENDERDOC")
