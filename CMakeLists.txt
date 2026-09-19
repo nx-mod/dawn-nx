@@ -553,14 +553,28 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
         set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
         set(AURORA_DAWN_PROVIDER "vendor" CACHE STRING "" FORCE)
         set(AURORA_SDL3_PROVIDER "vendor" CACHE STRING "" FORCE)
-        add_subdirectory(/home/proot-dev/switch/wiicompiled/aurora-main aurora-main-build)
+        # The mkwii-nx checkout sits next to this one (../mkwii-nx); pass
+        # -DMKWII_NX_DIR=<path> if yours lives elsewhere.
+        if (NOT MKWII_NX_DIR)
+            foreach(_candidate mkwii-nx wiicompiled)
+                if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../${_candidate}/runtime/CMakeLists.txt")
+                    get_filename_component(MKWII_NX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${_candidate}" ABSOLUTE)
+                    break()
+                endif ()
+            endforeach ()
+        endif ()
+        if (NOT EXISTS "${MKWII_NX_DIR}/runtime/CMakeLists.txt")
+            message(FATAL_ERROR "mkwii-nx not found next to this checkout; set -DMKWII_NX_DIR=<path to mkwii-nx>")
+        endif ()
+        set(MKWII_NX_DIR "${MKWII_NX_DIR}" CACHE PATH "mkwii-nx checkout" FORCE)
+        add_subdirectory(${MKWII_NX_DIR}/aurora-main aurora-main-build)
 
         # The actual translated-MKW build: runtime/CMakeLists.txt's own aurora
         # add_subdirectory() is guarded with `if (NOT TARGET aurora_core)`, so
         # it reuses the aurora-main-build target added just above instead of
         # re-adding the same source directory under a second binary dir.
         set(MKW_BUILD_PRODUCTS ON CACHE BOOL "" FORCE)
-        add_subdirectory(/home/proot-dev/switch/wiicompiled/runtime wiicompiled-runtime-build)
+        add_subdirectory(${MKWII_NX_DIR}/runtime wiicompiled-runtime-build)
 
         # The game's Vulkan path ends at NVK. Same recipe the smoke test
         # proved on hardware: libnvk MUST be whole-archive (its Mesa dispatch
