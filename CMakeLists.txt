@@ -574,7 +574,11 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_N
                 -Wl,-u,vk_icdGetInstanceProcAddr
                 -Wl,--whole-archive -lnvk -Wl,--no-whole-archive
                 -lnvk_support
-                -lz)
+                -lz
+                # Every thread gets a 4 MiB stack instead of libnx's 128 KiB
+                # default; Tint overflowed the default compiling MKW shaders.
+                # See runtime/platform_switch/switch_thread_stack.cpp.
+                -Wl,--wrap=pthread_create)
         endif()
     endif()
 endif()

@@ -95,6 +95,14 @@
 #define DAWN_PLATFORM_IS_POSIX 1
 #include <emscripten/emscripten.h>
 
+#elif defined(__SWITCH__)
+// Nintendo Switch (Horizon OS / libnx). Not treated as POSIX: newlib/libnx
+// provides pthreads and a POSIX-ish libc subset, but no dlopen and no real
+// mmap (see wiicompiled/runtime/src/guest_flat_memory.cpp in this same
+// workspace for the mmap gap hit porting the game runtime itself) - letting
+// DAWN_PLATFORM_IS(POSIX) code paths run here would pull those in silently.
+#define DAWN_PLATFORM_IS_HORIZON 1
+
 #else
 #error "Unsupported platform."
 #endif
@@ -240,6 +248,9 @@ static_assert(sizeof(sizeof(char)) == 4, "Expect sizeof(size_t) == 4");
 #endif
 #if !defined(DAWN_PLATFORM_IS_EMSCRIPTEN)
 #define DAWN_PLATFORM_IS_EMSCRIPTEN 0
+#endif
+#if !defined(DAWN_PLATFORM_IS_HORIZON)
+#define DAWN_PLATFORM_IS_HORIZON 0
 #endif
 
 #if !defined(DAWN_PLATFORM_IS_X86)

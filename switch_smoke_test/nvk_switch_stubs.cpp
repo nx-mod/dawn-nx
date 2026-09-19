@@ -56,6 +56,13 @@ long sysconf(int name) {
         }
         return static_cast<long>(totalMemory / 0x1000);
     }
+    case _SC_NPROCESSORS_ONLN:
+    case _SC_NPROCESSORS_CONF:
+        // Horizon gives an application three cores (the fourth is reserved for
+        // the system). Returning -1 here made std::thread::hardware_concurrency()
+        // report 0, and every worker pool sized from it collapsed to a single
+        // thread - including the shader compiler's.
+        return 3;
     default:
         return -1;
     }
