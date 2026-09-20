@@ -20,9 +20,29 @@ Tint (the shader compiler) needed no changes; it runs on-device.
 
 ## Status
 
-Works: a real game renders through it. Dawn's disk shader cache does not persist yet - see sqlite-nx.
+Works, and proven on hardware by its own demo (`switch_smoke_test/`, built as `dawn-nx-demo.nro`):
+instance, adapter and device; buffer upload, copy and readback; a compute shader; render to a texture
+with vertex and uniform buffers, a sampled texture and a sampler, checked pixel by pixel; 180 frames
+presented at 60 fps; then an ordered teardown. 10 of 10 on a Switch.
+
+The shader cache persists now, through [sqlite-nx](https://github.com/nx-mod/sqlite-nx): a second
+launch reloads compiled shaders instead of building them again (2859 of 2860 hits, 26 MiB).
+
+`dawn_switch_link_nvk(<target>)` (`switch_smoke_test/NvkLink.cmake`) links any Switch executable
+against NVK with the whole-archive recipe it needs.
+
+## Known limitation
+
+Dawn's **OpenGL and OpenGL ES backends do not come up** on Switch: both report "No supported adapters"
+when handed nxvk's EGL. Vulkan is unaffected, and is the path games use. The demo runs all three, so
+the failure is visible and measurable when someone wants to chase it.
 
 ## Plan
 
 Publish as a prebuilt devkitPro portlib so games link it instead of rebuilding Dawn, which dominates
 build time.
+
+## Releases
+
+Prebuilt packages are tagged `<upstream version>-nx-mod-v<n>`, the same convention across every nx-mod
+library, so a project can pin one line per dependency.
