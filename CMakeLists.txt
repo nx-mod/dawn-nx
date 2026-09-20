@@ -414,6 +414,12 @@ if (${DAWN_ENABLE_DESKTOP_GL} OR ${DAWN_ENABLE_OPENGLES})
     set(DAWN_ENABLE_OPENGL ON)
 endif()
 
+# Khronos' eglplatform.h has no Horizon branch ("Platform not recognized"); the
+# EGL here is nxvk's, whose native window/display types are plain pointers.
+if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    add_compile_definitions(EGL_NO_PLATFORM_SPECIFIC_TYPES)
+endif ()
+
 if(DAWN_ENABLE_PIC)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
