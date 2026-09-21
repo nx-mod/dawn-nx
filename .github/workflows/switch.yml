@@ -1,0 +1,62 @@
+# Dawn for Horizon, and the demo that proves the backends come up.
+#
+# Upstream's workflows build for desktop and never touch this. The demo NRO is
+# the artifact worth keeping: it reports, per backend, whether an adapter,
+# device, compute, render and present all work on real hardware.
+name: switch
+
+on:
+  push:
+    branches: [switch]
+  pull_request:
+    branches: [switch]
+  workflow_dispatch:
+
+concurrency:
+  group: switch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: dawn + demo NRO
+    runs-on: ubuntu-24.04
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 180
+    steps:
+      - name: Free disk space
+        run: rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Dawn's Vulkan backend ends at NVK, which ships built as a portlib.
+      - name: nxvk portlib
+        run: |
+          set -eu
+          url=$(curl -fsSL https://api.github.com/repos/nx-mod/nxvk/releases/latest \
+                | grep -o 'https://[^"]*nxvk-switch-portlib[^"]*\.tar\.xz' | head -1)
+          echo "portlib: $url"
+          curl -fsSL "$url" -o /tmp/nxvk.tar.xz
+          tar -xJf /tmp/nxvk.tar.xz -C "$DEVKITPRO/portlibs/switch" --strip-components=1
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DDAWN_FETCH_DEPENDENCIES=OFF \
+                -DDAWN_BUILD_SAMPLES=OFF \
+                -DDAWN_BUILD_TESTS=OFF \
+                -DTINT_BUILD_TESTS=OFF \
+                -DTINT_BUILD_CMD_TOOLS=OFF
+
+      - name: Build the demo
+        run: cmake --build build -j2 --target dawn_nx_demo_nro
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dawn-nx-demo
+          path: build/switch_smoke_test/dawn-nx-demo.nro
+          retention-days: 14
+          if-no-files-found: error
