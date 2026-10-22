@@ -243,7 +243,8 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
 
     TINT_CHECK_RESULT(raise::ShaderIO(
         module, raise::ShaderIOConfig{immediate_data_layout, options.depth_range_offsets,
-                                      options.bgra_swizzle_locations}));
+                                      options.bgra_swizzle_locations,
+                                      options.deko3d_conventions}));
 
     // Must come after ShaderIO as it operates on module-scope `in` variables.
     TINT_CHECK_RESULT(raise::OffsetFirstIndex(

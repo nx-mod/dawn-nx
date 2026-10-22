@@ -529,7 +529,8 @@ ResultOrError<Ref<DeviceBase>> PhysicalDevice::CreateDeviceImpl(
         }
     }
 
-    bool useRobustness = !deviceToggles.IsEnabled(Toggle::DisableRobustness);
+    bool useRobustness = !deviceToggles.IsEnabled(Toggle::DisableRobustness) &&
+                         mDisplay->egl->HasExt(EGLExt::CreateContextRobustness);
 
     // Workaround: Imagination EGL 1.5 drivers do not support the new robustness enum.
     // Use the pre-1.5 extension enum instead.

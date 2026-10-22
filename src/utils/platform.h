@@ -90,6 +90,12 @@
 #define DAWN_PLATFORM_IS_FUCHSIA 1
 #define DAWN_PLATFORM_IS_POSIX 1
 
+#elif defined(__SWITCH__)
+// Nintendo Switch homebrew (devkitA64 + newlib + libnx): POSIX-ish libc and pthreads, but no
+// dynamic linking, mmap or fd-based shared memory.
+#define DAWN_PLATFORM_IS_SWITCH 1
+#define DAWN_PLATFORM_IS_POSIX 1
+
 #elif defined(__EMSCRIPTEN__)
 #define DAWN_PLATFORM_IS_EMSCRIPTEN 1
 #define DAWN_PLATFORM_IS_POSIX 1
@@ -235,6 +241,9 @@ static_assert(sizeof(sizeof(char)) == 4, "Expect sizeof(size_t) == 4");
 #define DAWN_PLATFORM_IS_MACOS 0
 #endif
 
+#if !defined(DAWN_PLATFORM_IS_SWITCH)
+#define DAWN_PLATFORM_IS_SWITCH 0
+#endif
 #if !defined(DAWN_PLATFORM_IS_FUCHSIA)
 #define DAWN_PLATFORM_IS_FUCHSIA 0
 #endif

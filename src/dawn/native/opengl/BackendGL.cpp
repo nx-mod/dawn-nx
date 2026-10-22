@@ -81,10 +81,13 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
         Ref<DisplayEGL> display;
         DAWN_TRY_ASSIGN(display, std::move(maybeDisplay));
 
-        if (!display->egl->HasExt(EGLExt::CreateContextRobustness)) {
+        // switch-mesa (nouveau) does not advertise it; robust contexts are only an extra safety
+        // net, so the Switch build creates plain contexts instead (see PhysicalDeviceGL).
+        if (!DAWN_PLATFORM_IS(SWITCH) && !display->egl->HasExt(EGLExt::CreateContextRobustness)) {
             return DAWN_VALIDATION_ERROR("EGL_EXT_create_context_robustness is required.");
         }
-        if (!display->egl->HasExt(EGLExt::FenceSync) &&
+        // switch-mesa advertises neither; Queue falls back to glFinish-based completion there.
+        if (!DAWN_PLATFORM_IS(SWITCH) && !display->egl->HasExt(EGLExt::FenceSync) &&
             !display->egl->HasExt(EGLExt::ReusableSync)) {
             return DAWN_INTERNAL_ERROR(
                 "EGL_KHR_fence_sync or EGL_KHR_reusable_sync must be supported");

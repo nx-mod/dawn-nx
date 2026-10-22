@@ -268,7 +268,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             auto* ptr = ty.ptr(core::AddressSpace::kOut, ty.i32(), core::Access::kWrite);
             to = builder.Access(ptr, to, 0_u)->Result();
             value = builder.Convert(ty.i32(), value)->Result();
-        } else if (outputs[idx].attributes.builtin == core::BuiltinValue::kPosition) {
+        } else if (outputs[idx].attributes.builtin == core::BuiltinValue::kPosition &&
+                   !config.deko3d_conventions) {
             auto* x = builder.Swizzle(ty.f32(), value, {0});
 
             // Negate the gl_Position.y value

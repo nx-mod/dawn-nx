@@ -37,6 +37,25 @@
 #if DAWN_PLATFORM_IS(WINUWP)
 #include "src/dawn/common/WindowsUtils.h"
 #endif
+#elif DAWN_PLATFORM_IS(SWITCH)
+// No dynamic linking on Switch: every library load fails cleanly, so callers take their
+// statically-provided path (the GL backend uses RequestAdapterOptionsGetGLProc instead).
+#define RTLD_NOW 0
+#define RTLD_NOLOAD 0
+namespace {
+void* dlopen(const char*, int) {
+    return nullptr;
+}
+void* dlsym(void*, const char*) {
+    return nullptr;
+}
+int dlclose(void*) {
+    return 0;
+}
+const char* dlerror() {
+    return "dynamic libraries are not supported on Nintendo Switch";
+}
+}  // namespace
 #elif DAWN_PLATFORM_IS(POSIX)
 #include <dlfcn.h>
 #else

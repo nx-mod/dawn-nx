@@ -73,7 +73,10 @@ Queue::Queue(Device* device, const QueueDescriptor* descriptor) : QueueBase(devi
     } else if (egl.HasExt(EGLExt::ReusableSync)) {
         mEGLSyncType = EGL_SYNC_REUSABLE_KHR;
     } else {
-        DAWN_UNREACHABLE();
+        // No EGL sync objects (switch-mesa): SubmitFenceSync finishes GL work synchronously
+        // instead, so every submitted serial is already complete when queried.
+        DAWN_ASSERT(DAWN_PLATFORM_IS(SWITCH));
+        mEGLSyncType = EGL_NONE;
     }
 }
 
@@ -233,6 +236,12 @@ MaybeError Queue::SubmitFenceSync() {
     Device* device = ToBackend(GetDevice());
     return device->EnqueueAndFlushGL(
         SubmitMode::Passive, [&](const OpenGLFunctions& gl) -> MaybeError {
+            if (mEGLSyncType == EGL_NONE) {
+                DAWN_GL_TRY(gl, Finish());
+                IncrementLastSubmittedCommandSerial();
+                mHasPendingUnsignaledCommands = false;
+                return {};
+            }
             Ref<WrappedEGLSync> sync;
             DisplayEGL* display = ToBackend(device->GetPhysicalDevice())->GetDisplay();
             DAWN_TRY_ASSIGN(sync, WrappedEGLSync::Create(display, gl, mEGLSyncType, nullptr));
@@ -315,6 +324,12 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
     auto deviceGuard = GetDevice()->GetGuard();
 
     Device* device = ToBackend(GetDevice());
+    if (mEGLSyncType == EGL_NONE) {
+        // No fences exist to poll (see the constructor); SubmitFenceSync already glFinish()ed, so
+        // everything submitted so far is complete. Returning 0 here would mean "no progress"
+        // forever and hang every MapAsync/OnSubmittedWorkDone.
+        return GetLastSubmittedCommandSerial();
+    }
     // This function is called after all dependent GL commands have been flushed in
     // Queue::SubmitImpl(), it's safe to use ExecuteGL().
     return device->ExecuteGL(SubmitMode::Passive, [&](const OpenGLFunctions& gl) -> auto {

@@ -1127,6 +1127,18 @@ class Printer : public tint::TextGenerator {
             if (itr != options_.sampler_texture_to_name.end()) {
                 names_.Add(var->Result(), itr->second);
             }
+            if (options_.deko3d_conventions) {
+                auto unit = options_.sampler_texture_to_binding.find(key);
+                const uint32_t binding = unit != options_.sampler_texture_to_binding.end()
+                                             ? unit->second
+                                             : combined_texture_sampler->TextureBindingPoint().binding;
+                out << "layout(binding = " << binding << ") ";
+            }
+        } else if (options_.deko3d_conventions && !ptr->UnwrapPtr()->Is<core::type::StorageTexture>()) {
+            // A texture used without a sampler (textureLoad) still needs an explicit unit.
+            if (auto bp = var->BindingPoint()) {
+                out << "layout(binding = " << bp->binding << ") ";
+            }
         }
 
         EmitVar(out, var, true);

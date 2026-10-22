@@ -90,6 +90,11 @@ namespace null {
 BackendConnection* Connect(InstanceBase* instance);
 }
 #endif  // defined(DAWN_ENABLE_BACKEND_NULL)
+#if defined(DAWN_ENABLE_BACKEND_DEKO3D)
+namespace deko3d {
+BackendConnection* Connect(InstanceBase* instance);
+}
+#endif  // defined(DAWN_ENABLE_BACKEND_DEKO3D)
 #if defined(DAWN_ENABLE_BACKEND_WEBGPU)
 namespace webgpu {
 BackendConnection* Connect(InstanceBase* instance);
@@ -465,6 +470,11 @@ BackendConnection* InstanceBase::GetBackendConnection(wgpu::BackendType backendT
     };
 
     switch (backendType) {
+#if defined(DAWN_ENABLE_BACKEND_DEKO3D)
+        case wgpu::BackendType::Deko3d:
+            Register(deko3d::Connect(this), wgpu::BackendType::Deko3d);
+            break;
+#endif  // defined(DAWN_ENABLE_BACKEND_DEKO3D)
 #if defined(DAWN_ENABLE_BACKEND_NULL)
         case wgpu::BackendType::Null:
             Register(null::Connect(this), wgpu::BackendType::Null);

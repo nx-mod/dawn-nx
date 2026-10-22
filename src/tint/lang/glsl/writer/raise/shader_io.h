@@ -51,6 +51,9 @@ struct ShaderIOConfig {
 
     /// locations of vertex input variables to apply BGRA swizzle to.
     std::unordered_set<uint32_t> bgra_swizzle_locations{};
+
+    /// keep WebGPU clip space (no gl_Position Y flip / depth remap); see Options.
+    bool deko3d_conventions = false;
 };
 
 /// ShaderIO is a transform that moves each entry point function's parameters and return value to

@@ -217,6 +217,15 @@ struct Options {
     /// The binding point to use for placeholder samplers.
     BindingPoint placeholder_sampler_bind_point;
 
+    /// deko3d (Nintendo Switch) output: keep WebGPU clip-space conventions (no gl_Position Y flip
+    /// or depth remap, matching deko3d's upper-left origin and [0,1] depth), and give every
+    /// combined texture/sampler an explicit layout(binding) since the uam compiler requires one.
+    bool deko3d_conventions = false;
+
+    /// deko3d texture unit for each combined texture/sampler pair (see deko3d_conventions). Pairs
+    /// missing from the map fall back to the texture's remapped binding number.
+    std::unordered_map<CombinedTextureSamplerPair, uint32_t> sampler_texture_to_binding;
+
     /// The bindings
     Bindings bindings{};
 
@@ -243,6 +252,8 @@ struct Options {
                  array_length_from_uniform,
                  sampler_texture_to_name,
                  placeholder_sampler_bind_point,
+                 deko3d_conventions,
+                 sampler_texture_to_binding,
                  bindings,
                  substitute_overrides_config);
 };

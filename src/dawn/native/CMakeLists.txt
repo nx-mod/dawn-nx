@@ -589,6 +589,57 @@ if (DAWN_ENABLE_NULL)
     )
 endif()
 
+if (DAWN_ENABLE_DEKO3D)
+    list(APPEND private_headers
+        "deko3d/BindGroupDeko3d.h"
+        "deko3d/BindGroupLayoutDeko3d.h"
+        "deko3d/BufferDeko3d.h"
+        "deko3d/CommandBufferDeko3d.h"
+        "deko3d/ComputePipelineDeko3d.h"
+        "deko3d/DeviceDeko3d.h"
+        "deko3d/Forward.h"
+        "deko3d/IntegerTypes.h"
+        "deko3d/PhysicalDeviceDeko3d.h"
+        "deko3d/PipelineDeko3d.h"
+        "deko3d/PipelineLayoutDeko3d.h"
+        "deko3d/QuerySetDeko3d.h"
+        "deko3d/QueueDeko3d.h"
+        "deko3d/RenderPipelineDeko3d.h"
+        "deko3d/SamplerDeko3d.h"
+        "deko3d/ShaderModuleDeko3d.h"
+        "deko3d/SwapChainDeko3d.h"
+        "deko3d/TextureDeko3d.h"
+        "deko3d/UamCompilerDeko3d.h"
+        "deko3d/UtilsDeko3d.h"
+    )
+    list(APPEND sources
+        "deko3d/BindGroupDeko3d.cpp"
+        "deko3d/BindGroupLayoutDeko3d.cpp"
+        "deko3d/BufferDeko3d.cpp"
+        "deko3d/CommandBufferDeko3d.cpp"
+        "deko3d/ComputePipelineDeko3d.cpp"
+        "deko3d/DeviceDeko3d.cpp"
+        "deko3d/PhysicalDeviceDeko3d.cpp"
+        "deko3d/PipelineDeko3d.cpp"
+        "deko3d/PipelineLayoutDeko3d.cpp"
+        "deko3d/QuerySetDeko3d.cpp"
+        "deko3d/QueueDeko3d.cpp"
+        "deko3d/RenderPipelineDeko3d.cpp"
+        "deko3d/SamplerDeko3d.cpp"
+        "deko3d/ShaderModuleDeko3d.cpp"
+        "deko3d/SwapChainDeko3d.cpp"
+        "deko3d/TextureDeko3d.cpp"
+        "deko3d/UamCompilerDeko3d.cpp"
+        "deko3d/UtilsDeko3d.cpp"
+    )
+    # uam (deko3d's GLSL compiler, built separately as a static library) is only visible to the one
+    # translation unit that drives it; mesa's headers and defines must not leak into Dawn.
+    set_source_files_properties("deko3d/UamCompilerDeko3d.cpp" PROPERTIES
+        INCLUDE_DIRECTORIES "${DAWN_UAM_DIR}/source;${DAWN_UAM_DIR}/mesa-imported;${DAWN_UAM_DIR}/build-switch/mesa-imported;${DAWN_UAM_DIR}/build-switch/mesa-imported/glsl;${DAWN_UAM_DIR}/mesa-imported/glsl"
+        COMPILE_DEFINITIONS "NDEBUG;DESKTOP;_USE_MATH_DEFINES;HAVE_POSIX_MEMALIGN"
+        COMPILE_OPTIONS "-w")
+endif()
+
 if (DAWN_ENABLE_WEBGPU_ON_WEBGPU)
     list(APPEND headers
         "${DAWN_INCLUDE_DIR}/dawn/native/WebGPUBackend.h"

@@ -145,6 +145,8 @@ option(DAWN_ENABLE_D3D11 "Enable compilation of the D3D11 backend" ${ENABLE_D3D1
 option(DAWN_ENABLE_D3D12 "Enable compilation of the D3D12 backend" ${ENABLE_D3D12})
 option(DAWN_ENABLE_METAL "Enable compilation of the Metal backend" ${ENABLE_METAL})
 option(DAWN_ENABLE_NULL "Enable compilation of the Null backend" ${ENABLE_NULL})
+option(DAWN_ENABLE_DEKO3D "Enable compilation of the deko3d (Nintendo Switch) backend" OFF)
+set(DAWN_UAM_DIR "" CACHE PATH "uam (deko3d shader compiler) source+build root for the deko3d backend")
 option(DAWN_ENABLE_WEBGPU_ON_WEBGPU "Enable compilation of the WebGPU backend" ${ENABLE_WEBGPU_ON_WEBGPU})
 option(DAWN_ENABLE_DESKTOP_GL "Enable compilation of the OpenGL backend" ${ENABLE_DESKTOP_GL})
 option(DAWN_ENABLE_OPENGLES "Enable compilation of the OpenGL ES backend" ${ENABLE_OPENGLES})
@@ -430,6 +432,9 @@ endif()
 if (DAWN_ENABLE_NULL)
     target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_NULL")
 endif()
+if (DAWN_ENABLE_DEKO3D)
+    target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_DEKO3D")
+endif()
 if (DAWN_ENABLE_WEBGPU_ON_WEBGPU)
     target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_WEBGPU")
 endif()
@@ -490,7 +495,7 @@ add_subdirectory(src/tint)
 
 set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 
-if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_NULL OR DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES OR DAWN_ENABLE_VULKAN OR EMSCRIPTEN)
+if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_NULL OR DAWN_ENABLE_DEKO3D OR DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES OR DAWN_ENABLE_VULKAN OR EMSCRIPTEN)
     add_subdirectory(generator)
     # Note that we must add Emscripten directory first to ensure the correct
     # headers will be exported upwards.

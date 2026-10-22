@@ -148,7 +148,7 @@ std::optional<std::string> GetExecutablePath() {
     // UNIMPLEMENTED
     return {};
 }
-#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
+#elif DAWN_PLATFORM_IS(EMSCRIPTEN) || DAWN_PLATFORM_IS(SWITCH)
 std::optional<std::string> GetExecutablePath() {
     return {};
 }
@@ -202,7 +202,7 @@ std::optional<std::string> GetModulePath() {
 std::optional<std::string> GetModulePath() {
     return {};
 }
-#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
+#elif DAWN_PLATFORM_IS(EMSCRIPTEN) || DAWN_PLATFORM_IS(SWITCH)
 std::optional<std::string> GetModulePath() {
     return {};
 }

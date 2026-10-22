@@ -355,7 +355,8 @@
             {"value": 5, "name": "metal"},
             {"value": 6, "name": "vulkan"},
             {"value": 7, "name": "openGL"},
-            {"value": 8, "name": "openGLES"}
+            {"value": 8, "name": "openGLES"},
+            {"value": 9, "name": "deko3d"}
         ]
     },
     "bind group": {

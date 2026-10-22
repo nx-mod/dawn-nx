@@ -118,7 +118,7 @@ ResultOrError<UnpackedPtr<SurfaceDescriptor>> ValidateSurfaceDescriptor(
                   Branch<SurfaceDescriptorFromWindowsWinUISwapChainPanel>,
                   Branch<SurfaceSourceXlibWindow>, Branch<SurfaceSourceWaylandSurface>>()));
     switch (type) {
-#if DAWN_PLATFORM_IS(ANDROID)
+#if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(SWITCH)
         case wgpu::SType::SurfaceSourceAndroidNativeWindow: {
             auto* subDesc = descriptor.Get<SurfaceSourceAndroidNativeWindow>();
             DAWN_ASSERT(subDesc != nullptr);

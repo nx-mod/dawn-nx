@@ -508,6 +508,8 @@ std::vector<Ref<AdapterBase>> SortAdapters(std::vector<Ref<AdapterBase>> adapter
                 return 4;
             case wgpu::BackendType::WebGPU:
                 return 5;
+            case wgpu::BackendType::Deko3d:
+                return 0;
             case wgpu::BackendType::Null:
                 return 6;
             case wgpu::BackendType::Undefined:

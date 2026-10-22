@@ -27,6 +27,11 @@
 
 #include "src/dawn/native/opengl/SwapChainEGL.h"
 
+#include "src/utils/platform.h"
+#if DAWN_PLATFORM_IS(SWITCH)
+#include <switch.h>
+#endif
+
 #include <utility>
 
 #include "src/dawn/native/Surface.h"
@@ -111,6 +116,19 @@ MaybeError SwapChainEGL::PresentImpl() {
                           "getting surface width"));
         DAWN_TRY(CheckEGL(egl, egl.QuerySurface(display, mEGLSurface, EGL_HEIGHT, &surfaceHeight),
                           "getting surface height"));
+#if DAWN_PLATFORM_IS(SWITCH)
+        // switch-mesa answers EGL_WIDTH/EGL_HEIGHT with 0, which turned the blit below into a
+        // 0x0 no-op (black screen with every present "succeeding"). The window's real size lives
+        // on the libnx NWindow itself.
+        if (surfaceWidth <= 0 || surfaceHeight <= 0) {
+            u32 windowWidth = 0;
+            u32 windowHeight = 0;
+            nwindowGetDimensions(static_cast<NWindow*>(GetSurface()->GetAndroidNativeWindow()),
+                                 &windowWidth, &windowHeight);
+            surfaceWidth = static_cast<EGLint>(windowWidth);
+            surfaceHeight = static_cast<EGLint>(windowHeight);
+        }
+#endif
 
         const OpenGLFunctions& gl = device->GetGL();
 
@@ -126,9 +144,17 @@ MaybeError SwapChainEGL::PresentImpl() {
                                         surfaceWidth, 0, GL_COLOR_BUFFER_BIT, GL_LINEAR));
 
         DAWN_GL_TRY(gl, DeleteFramebuffers(1, &readFbo));
+#if DAWN_PLATFORM_IS(SWITCH)
+        // Swap while the window surface is still current: once the surface scope ends the context
+        // may be released (gl_allow_context_on_multi_threads) and eglSwapBuffers on a
+        // non-current surface silently does nothing, leaving the display black.
+        DAWN_TRY(CheckEGL(egl, egl.SwapBuffers(display, mEGLSurface), "swapping buffers"));
+#endif
     }
 
+#if !DAWN_PLATFORM_IS(SWITCH)
     egl.SwapBuffers(display, mEGLSurface);
+#endif
 
     mTexture->APIDestroy();
     mTexture = nullptr;
@@ -206,6 +232,16 @@ MaybeError SwapChainEGL::CreateEGLSurface(const DisplayEGL* display) {
                     static_cast<ANativeWindow*>(surface->GetAndroidNativeWindow()), attribs.data());
                 return {};
 #endif  // DAWN_PLATFORM_IS(ANDROID)
+#if DAWN_PLATFORM_IS(SWITCH)
+            // Switch reuses the Android native-window surface source: mesa's Switch EGL platform
+            // takes the libnx NWindow* (nwindowGetDefault()) as its native window.
+            case Surface::Type::AndroidWindow:
+                mEGLSurface = egl.CreateWindowSurface(
+                    eglDisplay, config,
+                    static_cast<EGLNativeWindowType>(surface->GetAndroidNativeWindow()),
+                    attribs.data());
+                return {};
+#endif  // DAWN_PLATFORM_IS(SWITCH)
 #if defined(DAWN_ENABLE_BACKEND_METAL)
             case Surface::Type::MetalLayer:
                 mEGLSurface = egl.CreateWindowSurface(eglDisplay, config, surface->GetMetalLayer(),
